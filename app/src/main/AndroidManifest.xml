@@ -7,6 +7,11 @@
          Google Maps Android API v2, but you must specify either coarse or fine
          location permissions for the 'MyLocation' functionality.
     -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_INTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -15,12 +20,15 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
-        <activity android:name=".ui.service.ServiceActivity"></activity>
+        <activity
+            android:name=".ui.service.ServiceActivity"
+            android:parentActivityName=".ui.main.MainActivity" />
         <activity
             android:name=".ui.main.MainActivity"
             android:label="@string/title_activity_main"
@@ -33,10 +41,10 @@
         </activity>
         <activity
             android:name=".ui.database.DatabaseActivity"
-            android:parentActivityName=".ui.main.MainActivity"></activity>
+            android:parentActivityName=".ui.main.MainActivity" />
         <activity
             android:name=".ui.button.ButtonActivity"
-            android:parentActivityName=".ui.main.MainActivity"></activity>
+            android:parentActivityName=".ui.main.MainActivity" />
         <!--
              The API key for Google Maps-based APIs is defined as a string resource.
              (See the file "res/values/google_maps_api.xml").
