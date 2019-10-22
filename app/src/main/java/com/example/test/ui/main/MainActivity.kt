@@ -1,20 +1,10 @@
 package com.example.test.ui.main
 
-import android.Manifest
 import android.content.Intent
 import android.os.Bundle
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.snackbar.Snackbar
-import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
-import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
-import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.ActionBarDrawerToggle
 import com.example.test.R
@@ -27,23 +17,10 @@ import kotlinx.android.synthetic.main.app_bar_main.*
 import androidx.core.app.ActivityCompat
 import android.content.pm.PackageManager
 import android.Manifest.permission
-import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-import android.app.Activity
-import android.Manifest.permission.READ_EXTERNAL_STORAGE
-import androidx.core.app.ComponentActivity.ExtraData
-import androidx.core.content.ContextCompat.getSystemService
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
-
+import android.content.Context
 
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
-
-    private lateinit var appBarConfiguration: AppBarConfiguration
-    private val REQUEST_EXTERNAL_STORAGE = 1
-    private val PERMISSIONS_STORAGE = arrayOf(
-        READ_EXTERNAL_STORAGE,
-        WRITE_EXTERNAL_STORAGE
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,7 +31,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         drawer_layout.addDrawerListener(toggle)
         toggle.syncState()
 
-        verifyStoragePermissions(this)
+        verifyStoragePermissions()
 
 
         nav_view.setNavigationItemSelectedListener(this)
@@ -87,25 +64,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onDestroy() {
 
-        super.onDestroy()
+    private fun verifyStoragePermissions() {
+        val listPermission:MutableList<String> = arrayListOf(
+            permission.ACCESS_WIFI_STATE,
+            permission.READ_EXTERNAL_STORAGE,
+            permission.WRITE_EXTERNAL_STORAGE,
+            permission.ACCESS_FINE_LOCATION,
+            permission.INTERNET
+        )
+
+        if(!hasPermissions(applicationContext, listPermission)){
+            ActivityCompat.requestPermissions(this, listPermission.toTypedArray(), 1)
+        }
+
     }
 
-
-
-
-    private fun verifyStoragePermissions(activity: Activity) {
-        val permission =
-            ActivityCompat.checkSelfPermission(activity, WRITE_EXTERNAL_STORAGE)
-
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                activity,
-                PERMISSIONS_STORAGE,
-                REQUEST_EXTERNAL_STORAGE
-            )
-        }
+    private fun hasPermissions(context: Context, permissions: MutableList<String>): Boolean = permissions.all {
+        ActivityCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
     }
 
 }

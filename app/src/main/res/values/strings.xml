@@ -30,4 +30,5 @@
     <string name="web_services">Servicio Web</string>
     <string name="open">Abierto</string>
     <string name="close">Cerrado</string>
+    <string name="download_file">Descargado Archivo</string>
 </resources>

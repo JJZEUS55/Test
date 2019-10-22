@@ -6,9 +6,6 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.test.network.ServiceApi
 import com.example.test.network.ServiceUser
 import ir.mahdi.mzip.zip.ZipArchive
@@ -26,19 +23,49 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.lang.StringBuilder
 import android.icu.lang.UCharacter.GraphemeClusterBreak.T
+import androidx.lifecycle.*
+import com.google.gson.JsonObject
+import org.json.JSONArray
+import org.json.JSONObject
+import retrofit2.HttpException
 
 
+class ServiceViewModel(application: Application, private val navigator: Navigator) : AndroidViewModel(application) {
 
+    private val applicationAndroid = application
+    private val _liveReadTxt: MutableLiveData<Boolean> = MutableLiveData()
+    val liveRead: LiveData<Boolean>
+        get() = _liveReadTxt
 
-class ServiceViewModel(private val application: Application) : ViewModel() {
+    private val _livePositions: MutableLiveData<List<LocationFile>> = MutableLiveData()
+    val livePositions: LiveData<List<LocationFile>>
+        get() = _livePositions
+
+    private val _liveErrorHttp: MutableLiveData<Int> = MutableLiveData()
+    val liveErrorHttp: LiveData<Int>
+        get() = _liveErrorHttp
+
+    init {
+        _liveReadTxt.value = false
+        _liveErrorHttp.value = 0
+    }
+
 
     fun getUrlZip() {
         viewModelScope.launch {
+            navigator.showProgress()
             withContext(Dispatchers.IO) {
                 val serviceUser = ServiceUser(55, 12984)
-                val responseService = ServiceApi.retrofitService.getZip(serviceUser)
-                Log.d("URL", responseService.toString())
-                downloadFile(responseService.valueResponse)
+                try {
+                    val responseService = ServiceApi.retrofitService.getZip(serviceUser)
+                    Log.d("URL", responseService.toString())
+                    downloadFile(responseService.valueResponse)
+                } catch (e: HttpException) {
+                    e.printStackTrace()
+                    navigator.hideProgress()
+                    _liveErrorHttp.postValue(e.code())
+                }
+
             }
         }
     }
@@ -50,14 +77,17 @@ class ServiceViewModel(private val application: Application) : ViewModel() {
         Log.d("downloadFile", url)
 
         val managerDownload =
-            application.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
+            applicationAndroid.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager
 
         managerDownload?.enqueue(
             requestDownload.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE)
                 .setAllowedOverRoaming(false)
                 .setTitle("Archivo.zip")
                 .setDescription("Archivo Zip")
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "Archivo.zip")
+                .setDestinationInExternalPublicDir(
+                    Environment.DIRECTORY_DOWNLOADS,
+                    "Archivo.zip"
+                )
         )
     }
 
@@ -65,30 +95,56 @@ class ServiceViewModel(private val application: Application) : ViewModel() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 ZipArchive.unzip("/sdcard/Download/Archivo.zip", "/sdcard/Download/", "")
-                readJson()
+//                readJson()
+                _liveReadTxt.postValue(true)
             }
         }
     }
 
-    private fun readJson() {
-        var gson = Gson()
-        val bufferReader: BufferedReader = File("/sdcard/Download/cargaInicial_2019-10-21_12984.txt").bufferedReader()
-        val inputString = bufferReader.use {
-            it.readText()
+    fun readJson() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val listLocations: MutableList<LocationFile> = ArrayList()
+                var fileTxt: File? = null
+                val filesDirectory = File("/sdcard/Download")
+
+                fileTxt = filesDirectory.listFiles()?.find {
+                    it.path.contains("cargaInicial") && it.path.endsWith("txt")
+                }
+
+                Log.d("fileTxt", "$fileTxt")
+
+                val bufferReader: BufferedReader = File(fileTxt?.path).bufferedReader()
+                val inputString = bufferReader.use {
+                    it.readText()
+                }
+
+                val jsonObject = JSONObject(inputString)
+                val jsonArray =
+                    (jsonObject.getJSONArray("data").get(0) as? JSONObject)?.getJSONArray("UBICACIONES")
+
+                jsonArray?.let {
+                    for (i in 0 until it.length()) {
+                        val jsonLocation = it.getJSONObject(i)
+                        val locationFile = LocationFile()
+                        locationFile.FNLATITUD = jsonLocation.getDouble("FNLATITUD")
+                        locationFile.FNLONGITUD = jsonLocation.getDouble("FNLONGITUD")
+                        Log.d("locationFile", "$locationFile")
+                        listLocations.add(locationFile)
+                    }
+                    _livePositions.postValue(listLocations)
+                }
+            }
+            navigator.hideProgress()
         }
+    }
 
-        val string = StringBuilder()
-        inputString.forEach {
-            string.append(it)
-        }
+    fun resetLiveRead() {
+        _liveReadTxt.value = false
+    }
 
-        Log.d("json", string.toString())
-
-        val listLocations = object : TypeToken<List<LocationFile>>() {}.type
-        val post = gson.fromJson<List<LocationFile>>(inputString, listLocations)
-
-        Log.d("objectPost", "$post")
-
+    fun resetHttpError() {
+        _liveErrorHttp.value = 0
     }
 
 }
